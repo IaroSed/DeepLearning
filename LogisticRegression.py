@@ -12,13 +12,19 @@ import numpy as np
 from PIL import Image
 #from scipy import ndimage
 #from lr_utils import load_dataset
-import os, sys
+import os
 
 
 
-def resize():
-    path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train\\"
-    dirs = os.listdir( path)
+def resize(path):
+    '''
+    Resize the images to 300x300 size.
+    
+    Arguments:
+    path -- Path to the folder containing images to resize.
+    
+    '''
+    dirs = os.listdir(path)
     #print("for")
     for item in dirs:
         print(item)
@@ -28,13 +34,19 @@ def resize():
             imResize = im.resize((300,300), Image.ANTIALIAS)
             imResize.save(f + '.jpg', 'JPEG', quality=90)
 
-resize()
+#path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train\\"
+#resize(path)
 
 
-def trainset():
-    path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train\\"
+def trainset(path):
+    '''
+    Create the trainset: extract images from path, unfold them and create the N x M matrix containing the trainset.
+    
+    Arguments:
+    path -- Path to the folder containing images to include in the trainset.
+    '''
     dirs = os.listdir(path)
-    trainset = np.zeros((270000,1))
+    trainset = np.zeros((300*300*3,1))
     #print("for")
     for item in dirs:
         im = Image.open(path+item)
@@ -43,6 +55,8 @@ def trainset():
         #print(data_flat.shape)
         trainset = np.append(trainset, data_flat, axis=1)
         print(trainset.shape)
+        
+    trainset = np.delete(trainset, (0), axis=1)
     
     return trainset
 
@@ -108,17 +122,16 @@ def propagate(w, b, X, Y):
     m = X.shape[1]
     
     # FORWARD PROPAGATION (FROM X TO COST)
-    ### START CODE HERE ### (≈ 2 lines of code)
     A = sigmoid(np.dot(w.T, X) + b)  # compute activation
     cost = (- 1 / m) * np.sum(Y * np.log(A) + (1 - Y) * (np.log(1 - A)))  # compute cost
-    ### END CODE HERE ###
     
     # BACKWARD PROPAGATION (TO FIND GRAD)
-    ### START CODE HERE ### (≈ 2 lines of code)
     dw = (1 / m) * np.dot(X, (A - Y).T)
     db = (1 / m) * np.sum(A - Y)
-    ### END CODE HERE ###
 
+    
+    #print(dw.shape)
+    #print(w.shape)
     assert(dw.shape == w.shape)
     assert(db.dtype == float)
     cost = np.squeeze(cost)
@@ -159,27 +172,25 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
         
         
         # Cost and gradient calculation (≈ 1-4 lines of code)
-        ### START CODE HERE ### 
         grads, cost = propagate(w, b, X, Y)
-        ### END CODE HERE ###
+        
+        print ("Cost after iteration %i: %f" % (i, cost))
         
         # Retrieve derivatives from grads
         dw = grads["dw"]
         db = grads["db"]
         
-        # update rule (≈ 2 lines of code)
-        ### START CODE HERE ###
+        # update rule
         w = w - learning_rate * dw  # need to broadcast
         b = b - learning_rate * db
-        ### END CODE HERE ###
         
         # Record the costs
         if i % 100 == 0:
             costs.append(cost)
         
         # Print the cost every 100 training examples
-        if print_cost and i % 100 == 0:
-            print ("Cost after iteration %i: %f" % (i, cost))
+        #if print_cost and i % 100 == 0:
+        #    print ("Cost after iteration %i: %f" % (i, cost))
     
     params = {"w": w,
               "b": b}
@@ -189,14 +200,27 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
     
     return params, grads, costs
 
-trainset = trainset()
 
-trainset_standardized = trainset / 255
+## End of functions
+    
 
+
+
+path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train_small\\"
+trainset = trainset(path)
+
+# Standardize the trainset
+X = trainset / 255
+
+# Creating the Y (1: cat, 0: dog)
+cats = np.ones((1,500))
+dogs = np.zeros((1,500))
+
+Y = np.append(cats, dogs, axis=1)
+
+# Initializing the weights and biases
 dim = 270000
 w, b = initialize_with_zeros(dim)
 
-grads, cost = propagate(w, b, X, Y)
 
-
-params, grads, costs = optimize(w, b, X, Y, num_iterations= 100, learning_rate = 0.009, print_cost = False)
+params, grads, costs = optimize(w, b, X, Y, num_iterations= 2000, learning_rate = 0.0001, print_cost = False)
