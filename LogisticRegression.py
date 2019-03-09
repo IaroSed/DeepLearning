@@ -34,31 +34,31 @@ def resize(path):
             imResize = im.resize((300,300), Image.ANTIALIAS)
             imResize.save(f + '.jpg', 'JPEG', quality=90)
 
-#path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train\\"
+#path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\test\\"
 #resize(path)
 
 
-def trainset(path):
+def dataset(path):
     '''
-    Create the trainset: extract images from path, unfold them and create the N x M matrix containing the trainset.
+    Create the dataset: extract images from path, unfold them and create the N x M matrix containing the dataset.
     
     Arguments:
-    path -- Path to the folder containing images to include in the trainset.
+    path -- Path to the folder containing images to include in the dataset.
     '''
     dirs = os.listdir(path)
-    trainset = np.zeros((300*300*3,1))
+    dataset = np.zeros((300*300*3,1))
     #print("for")
     for item in dirs:
         im = Image.open(path+item)
         data=np.array(im.getdata())
         data_flat=data.reshape((data.shape[0]*3,1))
         #print(data_flat.shape)
-        trainset = np.append(trainset, data_flat, axis=1)
-        print(trainset.shape)
+        dataset = np.append(dataset, data_flat, axis=1)
+        print(dataset.shape)
         
-    trainset = np.delete(trainset, (0), axis=1)
+    dataset = np.delete(dataset, (0), axis=1)
     
-    return trainset
+    return dataset
 
 
 def sigmoid(z):
@@ -174,7 +174,7 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
         # Cost and gradient calculation (≈ 1-4 lines of code)
         grads, cost = propagate(w, b, X, Y)
         
-        print ("Cost after iteration %i: %f" % (i, cost))
+        #print ("Cost after iteration %i: %f" % (i, cost))
         
         # Retrieve derivatives from grads
         dw = grads["dw"]
@@ -188,9 +188,9 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
         if i % 100 == 0:
             costs.append(cost)
         
-        # Print the cost every 100 training examples
-        #if print_cost and i % 100 == 0:
-        #    print ("Cost after iteration %i: %f" % (i, cost))
+        #Print the cost every 100 training examples
+        if print_cost and i % 100 == 0:
+            print ("Cost after iteration %i: %f" % (i, cost))
     
     params = {"w": w,
               "b": b}
@@ -200,6 +200,37 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
     
     return params, grads, costs
 
+def predict(w, b, X):
+    '''
+    Predict whether the label is 0 or 1 using learned logistic regression parameters (w, b)
+    
+    Arguments:
+    w -- weights, a numpy array of size (num_px * num_px * 3, 1)
+    b -- bias, a scalar
+    X -- data of size (num_px * num_px * 3, number of examples)
+    
+    Returns:
+    Y_prediction -- a numpy array (vector) containing all predictions (0/1) for the examples in X
+    '''
+    
+    m = X.shape[1]
+    Y_prediction = np.zeros((1, m))
+    w = w.reshape(X.shape[0], 1)
+    
+    # Compute vector "A" predicting the probabilities of a cat being present in the picture
+    ### START CODE HERE ### (≈ 1 line of code)
+    A = sigmoid(np.dot(w.T, X) + b)
+    ### END CODE HERE ###
+    
+    for i in range(A.shape[1]):
+        # Convert probabilities a[0,i] to actual predictions p[0,i]
+        ### START CODE HERE ### (≈ 4 lines of code)
+        Y_prediction[0, i] = 1 if A[0, i] > 0.5 else 0
+        ### END CODE HERE ###
+    
+    assert(Y_prediction.shape == (1, m))
+    
+    return Y_prediction
 
 ## End of functions
     
@@ -207,20 +238,38 @@ def optimize(w, b, X, Y, num_iterations, learning_rate, print_cost = False):
 
 
 path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train_small\\"
-trainset = trainset(path)
+trainset = dataset(path)
+path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\test_small\\"
+testset = dataset(path)
 
 # Standardize the trainset
-X = trainset / 255
+X_train = trainset / 255
+X_test = testset / 255
 
-# Creating the Y (1: cat, 0: dog)
+# Creating the Ys (1: cat, 0: dog)
 cats = np.ones((1,500))
 dogs = np.zeros((1,500))
 
-Y = np.append(cats, dogs, axis=1)
+Y_train = np.append(cats, dogs, axis=1)
+
+cats = np.ones((1,200))
+dogs = np.zeros((1,200))
+
+Y_test = np.append(cats, dogs, axis=1)
+
 
 # Initializing the weights and biases
 dim = 270000
 w, b = initialize_with_zeros(dim)
 
 
-params, grads, costs = optimize(w, b, X, Y, num_iterations= 2000, learning_rate = 0.0001, print_cost = False)
+params, grads, costs = optimize(w, b, X_train, Y_train, num_iterations= 2000, learning_rate = 0.0001, print_cost = True)
+
+w = params["w"]
+b = params["b"]
+
+Y_prediction_test = predict(w, b, X_test)
+Y_prediction_train = predict(w, b, X_train)
+
+print("train accuracy: {} %".format(100 - np.mean(np.abs(Y_prediction_train - Y_train)) * 100))
+print("test accuracy: {} %".format(100 - np.mean(np.abs(Y_prediction_test - Y_test)) * 100))
