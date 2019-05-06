@@ -19,9 +19,9 @@ from PIL import Image
 import os
 
 
-def resize(path):
+def resize(path, size):
     '''
-    Resize the images to 300x300 size.
+    Resize the images to sizexsize size.
     
     Arguments:
     path -- Path to the folder containing images to resize.
@@ -34,14 +34,17 @@ def resize(path):
         if os.path.isfile(path+item):
             im = Image.open(path+item)
             f, e = os.path.splitext(path+item)
-            imResize = im.resize((300,300), Image.ANTIALIAS)
+            imResize = im.resize((size,size), Image.ANTIALIAS)
             imResize.save(f + '.jpg', 'JPEG', quality=90)
 
-#path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\test\\"
-#resize(path)
+
+path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train_small\\"
+resize(path,80)
+path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\test_small\\"
+resize(path,80)
 
 
-def dataset(path):
+def dataset(path,size):
     '''
     Create the dataset: extract images from path, unfold them and create the N x M matrix containing the dataset.
     
@@ -49,7 +52,7 @@ def dataset(path):
     path -- Path to the folder containing images to include in the dataset.
     '''
     dirs = os.listdir(path)
-    dataset = np.zeros((300*300*3,1))
+    dataset = np.zeros((size*size*3,1))
     #print("for")
     for item in dirs:
         im = Image.open(path+item)
@@ -63,7 +66,7 @@ def dataset(path):
     
     return dataset
 
-
+'''
 def sigmoid(Z):
     """
     Implements the sigmoid activation in numpy
@@ -161,7 +164,10 @@ def initialize_parameters_deep(layer_dims):
     parameters = {}
     L = len(layer_dims)            # number of layers in the network
 
+    print("Number Layers",L)
+
     for l in range(1, L):
+        print("Layer",l)
         parameters['W' + str(l)] = np.random.randn(layer_dims[l], layer_dims[l - 1]) * 0.01
         parameters['b' + str(l)] = np.zeros((layer_dims[l], 1))
         
@@ -187,7 +193,7 @@ def linear_forward(A, W, b):
     
     print("A:",A.shape)
     print("W:",W.shape)
-    print("b:",b.shape)
+    print("A:",b.shape)
     
     Z = np.dot(W, A) + b
     
@@ -411,7 +417,7 @@ def update_parameters(parameters, grads, learning_rate):
         
     return parameters
 
-def L_layer_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False): #lr was 0.009
+def L_layer_model(X, Y, layers_dims, learning_rate=0.0005, num_iterations=3000, print_cost=False): #lr was 0.009
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
     
@@ -462,36 +468,87 @@ def L_layer_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, 
     #plt.show()
     
     return parameters
+'''
 
 
 path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\train_small\\"
-trainset = dataset(path)
+trainset = dataset(path,80)
 path = "C:\\Users\\iasedric.REDMOND\\Documents\\_Perso\\Training\\Deep Learning\\test_small\\"
-testset = dataset(path)
+testset = dataset(path,80)
 
 # Standardize the trainset
 X_train = trainset / 255
 X_test = testset / 255
 
 # Creating the Ys (1: cat, 0: dog)
-cats = np.ones((1,500))
-dogs = np.zeros((1,500))
-
-Y_train = np.append(cats, dogs, axis=1)
-
 cats = np.ones((1,200))
 dogs = np.zeros((1,200))
 
+Y_train = np.append(cats, dogs, axis=1)
+
+cats = np.ones((1,100))
+dogs = np.zeros((1,100))
+
 Y_test = np.append(cats, dogs, axis=1)
 
+X_train = np.transpose(X_train)
+X_test = np.transpose(X_test)
 
-n_x = 270000     # num_px * num_px * 3
-n_h = 7
-n_y = 1
-layers_dims = (n_x, n_h, n_y)
+Y_train = np.transpose(Y_train)
+Y_test = np.transpose(Y_test)
+
+del trainset
+del testset
+
+del cats
+del dogs
+
+
+'''
+layers_dims = [270000, 20, 7, 5, 1]
 
 parameters = L_layer_model(X_train, Y_train, layers_dims, num_iterations=2500, print_cost=True)
 pred_train = predict(X_train, Y_train, parameters)
 pred_test = predict(X_test, Y_test, parameters)
+'''
 
 
+# Importing the Keras libraries and packages
+#import keras
+from keras.models import Sequential
+from keras.layers import Dense
+
+# Initialising the ANN
+classifier = Sequential()
+
+# Adding the input layer and the first hidden layer
+classifier.add(Dense(output_dim = 9600, init = 'uniform', activation = 'relu', input_dim = 19200))
+
+# Adding the second hidden layer
+classifier.add(Dense(output_dim = 9600, init = 'uniform', activation = 'relu'))
+
+# Adding the third hidden layer
+classifier.add(Dense(output_dim = 9600, init = 'uniform', activation = 'relu'))
+
+# Adding the fourth hidden layer
+classifier.add(Dense(output_dim = 9600, init = 'uniform', activation = 'relu'))
+
+# Adding the output layer
+classifier.add(Dense(output_dim = 1, init = 'uniform', activation = 'sigmoid'))
+
+# Compiling the ANN
+classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+
+# Fitting the ANN to the Training set
+classifier.fit(X_train, Y_train, batch_size = 10, nb_epoch = 100)
+
+
+# Part 3 - Making the predictions and evaluating the model
+
+# Predicting the Test set results
+Y_pred = classifier.predict(X_test)
+Y_pred = (Y_pred > 0.5)
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(Y_test, Y_pred)
